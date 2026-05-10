@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Thông tin người dùng và vai trò trong hệ thống.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "pastor", "accountant", "staff", "member"] },
+        "ministryId": { "type": "string", "description": "ID của mục vụ đang tham gia" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "gender": { "type": "string", "enum": ["male", "female", "other"] },
+        "position": { "type": "string", "description": "Chức vụ trong hội thánh" },
+        "isApproved": { "type": "boolean", "description": "Trạng thái phê duyệt của quản trị viên" },
+        "isEmailVerified": { "type": "boolean", "description": "Trạng thái xác thực email" }
+      },
+      "required": ["uid", "email", "role", "isApproved", "isEmailVerified"]
+    },
+    "Ministry": {
+      "title": "Ministry",
+      "description": "Các ban ngành/mục vụ trong hội thánh (Ban hát, Thanh niên, Thiếu nhi...)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "leaderId": { "type": "string", "description": "UID của trưởng ban" },
+        "description": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "Các buổi nhóm, sự kiện của hội thánh.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["service", "meeting", "event", "prayer"] }
+      },
+      "required": ["title", "startTime", "type"]
+    },
+    "PrayerTopic": {
+      "title": "Prayer Topic",
+      "description": "Các vấn đề cầu nguyện.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "topic": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "assignedTo": { "type": "string", "description": "UID của người phụ trách cầu nguyện" }
+      },
+      "required": ["topic", "date"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Quản lý thu chi (Dâng hiến, chi phí hoạt động...)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["income", "expense"] },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "recordedBy": { "type": "string", "description": "UID của kế toán ghi nhận" }
+      },
+      "required": ["type", "amount", "category", "date"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Giao việc cho nhân sự.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string", "description": "UID của người nhận việc" },
+        "assignedBy": { "type": "string", "description": "UID của người giao việc" },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["todo", "in-progress", "done"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+        "chatMessageId": { "type": "string", "description": "ID của tin nhắn nếu công việc được giao từ chat" }
+      },
+      "required": ["title", "assignedTo", "status"]
+    },
+    "ChatRoom": {
+      "title": "Chat Room",
+      "description": "Phòng chat giữa các người dùng.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" }, "description": "Danh sách UID người tham gia" },
+        "lastMessage": { "type": "string" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["participants", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Tin nhắn trong phòng chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roomId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["text", "task"] },
+        "taskId": { "type": "string", "description": "ID của công việc nếu tin nhắn là giao việc" }
+      },
+      "required": ["roomId", "senderId", "text", "createdAt", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "Thông tin cá nhân người dùng" },
+    "/ministries/{id}": { "schema": "Ministry", "description": "Danh sách các ban ngành" },
+    "/activities/{id}": { "schema": "Activity", "description": "Lịch hoạt động hội thánh" },
+    "/prayer_topics/{id}": { "schema": "PrayerTopic", "description": "Lịch cầu nguyện" },
+    "/transactions/{id}": { "schema": "Transaction", "description": "Sổ thu chi" },
+    "/tasks/{id}": { "schema": "Task", "description": "Công việc được giao" },
+    "/chat_rooms/{id}": { "schema": "ChatRoom", "description": "Danh sách các phòng chat" },
+    "/chat_rooms/{id}/messages/{messageId}": { "schema": "ChatMessage", "description": "Tin nhắn trong phòng chat" }
+  }
+}

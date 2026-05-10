@@ -1,0 +1,172 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
+    }
+
+    function currentUserRole() {
+      return getUserData(request.auth.uid).role;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (currentUserRole() == 'admin' || request.auth.token.email == 'vnlapse@gmail.com');
+    }
+
+    function isPastor() {
+      return isSignedIn() && (currentUserRole() == 'pastor' || currentUserRole() == 'admin');
+    }
+
+    function isAccountant() {
+      return isSignedIn() && (currentUserRole() == 'accountant' || currentUserRole() == 'admin');
+    }
+
+    function isStaff() {
+      return isSignedIn() && (currentUserRole() == 'staff' || isPastor());
+    }
+
+    function isApproved() {
+      return isSignedIn() && getUserData(request.auth.uid).isApproved == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'isApproved', 'isEmailVerified']) &&
+             data.keys().size() <= 15 &&
+             data.uid == request.auth.uid &&
+             data.email == request.auth.token.email &&
+             data.role in ['admin', 'pastor', 'accountant', 'staff', 'member'] &&
+             data.isApproved is bool &&
+             data.isEmailVerified is bool &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100));
+    }
+
+    function isValidMinistry(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000));
+    }
+
+    function isValidActivity(data) {
+      return data.keys().hasAll(['title', 'startTime', 'type']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.type in ['service', 'meeting', 'event', 'prayer'] &&
+             data.startTime is timestamp;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['type', 'amount', 'category', 'date', 'recordedBy']) &&
+             data.type in ['income', 'expense'] &&
+             data.amount is number && data.amount >= 0 &&
+             data.category is string &&
+             data.date is timestamp &&
+             data.recordedBy == request.auth.uid;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['title', 'assignedTo', 'status']) &&
+             data.title is string && data.title.size() <= 500 &&
+             data.status in ['todo', 'in-progress', 'done'] &&
+             (!('priority' in data) || data.priority in ['low', 'medium', 'high']) &&
+             isValidId(data.assignedTo);
+    }
+
+    // --- Collection Routes ---
+
+    match /users/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && (request.auth.uid == uid || isAdmin() || isPastor());
+      allow list: if isSignedIn() && (isAdmin() || isPastor() || isStaff());
+      
+      allow create: if isSignedIn() && uid == request.auth.uid && isValidUser(incoming()) && 
+                    incoming().role == 'member' && incoming().isApproved == false;
+      
+      allow update: if isSignedIn() && isValidId(uid) && (
+        (uid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'phone', 'address', 'gender', 'position'])) ||
+        (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'isApproved', 'ministryId']))
+      );
+    }
+
+    match /ministries/{id} {
+      allow read: if isSignedIn();
+      allow create: if isPastor() && isValidId(id) && isValidMinistry(incoming());
+      allow update: if (isPastor() || (isSignedIn() && existing().leaderId == request.auth.uid)) && 
+                    isValidId(id) && isValidMinistry(incoming()) &&
+                    (isPastor() || incoming().diff(existing()).affectedKeys().hasOnly(['description']));
+      allow delete: if isPastor() && isValidId(id);
+    }
+
+    match /activities/{id} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isStaff() && isValidId(id) && (request.method == 'delete' || isValidActivity(incoming()));
+    }
+
+    match /prayer_topics/{id} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isApproved() && isValidId(id);
+      allow delete: if isStaff() && isValidId(id);
+    }
+
+    match /transactions/{id} {
+      allow read: if isAccountant();
+      allow create, update: if isAccountant() && isValidId(id) && isValidTransaction(incoming());
+      allow delete: if isAdmin() && isValidId(id);
+    }
+
+    match /tasks/{id} {
+      allow read: if isSignedIn() && isValidId(id) && (resource.data.assignedTo == request.auth.uid || resource.data.assignedBy == request.auth.uid || isPastor());
+      allow create: if isStaff() && isValidId(id) && isValidTask(incoming()) && incoming().assignedBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(id) && (
+        // Terminal state locking: Cannot update if status was already 'done' unless admin
+        (existing().status != 'done' || isAdmin()) &&
+        (
+          (existing().assignedTo == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['status'])) ||
+          (existing().assignedBy == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'assignedTo', 'dueDate', 'priority', 'status']))
+        )
+      );
+      allow delete: if isStaff() && isValidId(id) && existing().assignedBy == request.auth.uid;
+    }
+
+    match /chat_rooms/{id} {
+      allow get: if isSignedIn() && isValidId(id) && request.auth.uid in resource.data.participants;
+      allow list: if isSignedIn() && request.auth.uid in resource.data.participants;
+      allow create: if isSignedIn() && isValidId(id) && request.auth.uid in incoming().participants;
+      allow update: if isSignedIn() && isValidId(id) && request.auth.uid in existing().participants && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'lastMessageAt', 'updatedAt']);
+    }
+
+    match /chat_rooms/{id}/messages/{messageId} {
+      allow read: if isSignedIn() && isValidId(messageId) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(id)).data.participants;
+      allow create: if isSignedIn() && isValidId(messageId) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(id)).data.participants &&
+                    incoming().senderId == request.auth.uid;
+    }
+  }
+}
