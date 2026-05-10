@@ -63,7 +63,8 @@ export default function Activities({ user }: ActivitiesProps) {
     try {
       const activityData = {
         ...formData,
-        startTime: Timestamp.fromDate(new Date(formData.startTime!))
+        startTime: Timestamp.fromDate(new Date(formData.startTime!)),
+        endTime: formData.endTime ? Timestamp.fromDate(new Date(formData.endTime)) : null
       };
       await addDoc(collection(db, path), activityData);
       setIsModalOpen(false);

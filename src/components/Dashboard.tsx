@@ -24,8 +24,22 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell
+  Cell,
+  Line,
+  Area,
+  ComposedChart,
+  Legend
 } from 'recharts';
+import { 
+  startOfDay, 
+  subDays, 
+  startOfMonth, 
+  endOfMonth, 
+  subMonths, 
+  isWithinInterval, 
+  eachDayOfInterval,
+  isSameDay
+} from 'date-fns';
 
 interface DashboardProps {
   user: UserProfile;
@@ -41,7 +55,18 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   });
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [timeframe, setTimeframe] = useState<'7days' | 'month' | 'lastMonth'>('7days');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [chartData, setChartData] = useState<any[]>([]);
+
+  const parseDate = (d: any) => {
+    if (!d) return new Date();
+    if (d instanceof Date) return d;
+    if (typeof d.toDate === 'function') return d.toDate();
+    if (d.seconds) return new Date(d.seconds * 1000);
+    return new Date(d);
+  };
 
   useEffect(() => {
     // Basic stats
@@ -65,23 +90,7 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       const expense = txs.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
       setStats(prev => ({ ...prev, balance: income - expense }));
       setRecentTransactions(txs.slice(0, 5));
-
-      // Chart data (last 7 days)
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        return format(d, 'yyyy-MM-dd');
-      }).reverse();
-
-      const data = last7Days.map(date => {
-        const dayTxs = txs.filter(t => format(new Date(t.date), 'yyyy-MM-dd') === date);
-        return {
-          name: format(new Date(date), 'dd/MM'),
-          income: dayTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-          expense: dayTxs.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)
-        };
-      });
-      setChartData(data);
+      setAllTransactions(txs);
     }, (error) => handleFirestoreError(error, OperationType.GET, 'transactions'));
 
     return () => {
@@ -91,6 +100,49 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       unsubTransactions();
     };
   }, []);
+
+  useEffect(() => {
+    if (allTransactions.length === 0) return;
+
+    let startDate: Date;
+    let endDate: Date;
+    const now = new Date();
+
+    if (timeframe === '7days') {
+      startDate = startOfDay(subDays(now, 6));
+      endDate = now;
+    } else if (timeframe === 'month') {
+      startDate = startOfMonth(now);
+      endDate = endOfMonth(now);
+    } else {
+      startDate = startOfMonth(subMonths(now, 1));
+      endDate = endOfMonth(subMonths(now, 1));
+    }
+
+    const interval = eachDayOfInterval({ start: startDate, end: endDate });
+    const categories = selectedCategory === 'all' 
+      ? allTransactions.map(t => t.category)
+      : [selectedCategory];
+
+    const data = interval.map(day => {
+      const dayTxs = allTransactions.filter(t => {
+        const tDate = parseDate(t.date);
+        const matchesDate = isSameDay(tDate, day);
+        const matchesCategory = selectedCategory === 'all' || t.category === selectedCategory;
+        return matchesDate && matchesCategory;
+      });
+
+      return {
+        name: format(day, timeframe === '7days' ? 'dd/MM' : 'dd'),
+        income: dayTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+        expense: dayTxs.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0)
+      };
+    });
+
+    setChartData(data);
+  }, [allTransactions, timeframe, selectedCategory]);
+
+  const categories = Array.from(new Set(allTransactions.map(t => t.category)));
 
   const statCards = [
     { id: 'personnel', label: 'Nhân sự', value: stats.users, icon: Users, color: 'bg-blue-500' },
@@ -147,51 +199,123 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Chart Section */}
         <div className="lg:col-span-2 bg-white p-6 sm:p-10 rounded-4xl border border-neutral-200 shadow-sm overflow-hidden glass">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-10">
             <div>
-              <h3 className="text-2xl font-display font-bold text-church-navy">Biểu đồ Tài chính</h3>
-              <p className="text-neutral-500 font-medium">Thống kê thu nhập và chi phí trong tuần</p>
+              <h3 className="text-2xl font-display font-bold text-church-navy">Phân tích Tài chính</h3>
+              <p className="text-neutral-500 font-medium">Xu hướng thu nhập và chi phí của Hội thánh</p>
             </div>
-            <div className="flex items-center gap-6 bg-neutral-50 p-2 rounded-2xl border border-neutral-100">
-               <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-xl shadow-sm">
-                  <div className="w-2.5 h-2.5 bg-church-navy rounded-full" />
-                  <span className="text-xs font-bold text-neutral-600">Thu</span>
-               </div>
-               <div className="flex items-center gap-2 px-3 py-1 bg-white rounded-xl shadow-sm">
-                  <div className="w-2.5 h-2.5 bg-neutral-300 rounded-full" />
-                  <span className="text-xs font-bold text-neutral-600">Chi</span>
-               </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <select 
+                value={timeframe}
+                onChange={(e) => setTimeframe(e.target.value as any)}
+                className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-bold text-church-navy outline-none focus:ring-2 focus:ring-church-gold/20"
+              >
+                <option value="7days">7 ngày qua</option>
+                <option value="month">Tháng này</option>
+                <option value="lastMonth">Tháng trước</option>
+              </select>
+
+              <select 
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-bold text-church-navy outline-none focus:ring-2 focus:ring-church-gold/20"
+              >
+                <option value="all">Tất cả danh mục</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
             </div>
           </div>
-          <div className="h-[300px] w-full">
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+            <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Thu</p>
+              <p className="text-lg font-black text-emerald-700">
+                {chartData.reduce((acc, d) => acc + d.income, 0).toLocaleString('vi-VN')}
+              </p>
+            </div>
+            <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100">
+              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-1">Chi</p>
+              <p className="text-lg font-black text-rose-700">
+                {chartData.reduce((acc, d) => acc + d.expense, 0).toLocaleString('vi-VN')}
+              </p>
+            </div>
+            <div className="p-4 bg-church-navy/5 rounded-2xl border border-church-navy/10">
+              <p className="text-[10px] font-black text-church-navy uppercase tracking-widest mb-1">Chênh lệch</p>
+              <p className="text-lg font-black text-church-navy">
+                {(chartData.reduce((acc, d) => acc + d.income, 0) - chartData.reduce((acc, d) => acc + d.expense, 0)).toLocaleString('vi-VN')}
+              </p>
+            </div>
+            <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+               <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Giao dịch</p>
+               <p className="text-lg font-black text-amber-700">
+                 {allTransactions.filter(t => {
+                   let startDate: Date;
+                   let endDate: Date = new Date();
+                   const now = new Date();
+                   if (timeframe === '7days') {
+                     startDate = startOfDay(subDays(now, 6));
+                   } else if (timeframe === 'month') {
+                     startDate = startOfMonth(now);
+                   } else {
+                     startDate = startOfMonth(subMonths(now, 1));
+                     endDate = endOfMonth(subMonths(now, 1));
+                   }
+                   const tDate = parseDate(t.date);
+                   return tDate >= startDate && tDate <= endDate && (selectedCategory === 'all' || t.category === selectedCategory);
+                 }).length}
+               </p>
+            </div>
+          </div>
+
+          <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis 
                   dataKey="name" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} 
-                  dy={15}
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }} 
+                  dy={10}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }}
+                  tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
                   tickFormatter={(v) => v >= 1000000 ? `${v/1000000}M` : v >= 1000 ? `${v/1000}k` : v}
                 />
                 <Tooltip 
-                  cursor={{ fill: '#f8fafc', radius: 8 }}
+                  cursor={{ stroke: '#f1f5f9', strokeWidth: 2 }}
                   contentStyle={{ 
-                    borderRadius: '20px', 
+                    borderRadius: '16px', 
                     border: '1px solid #f1f5f9', 
-                    boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)',
-                    padding: '12px 16px'
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+                    padding: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
                   }}
+                  formatter={(value: any) => [new Intl.NumberFormat('vi-VN').format(value) + ' ₫']}
                 />
-                <Bar dataKey="income" fill="#1A237E" radius={[6, 6, 0, 0]} barSize={24} />
-                <Bar dataKey="expense" fill="#CBD5E1" radius={[6, 6, 0, 0]} barSize={24} />
-              </BarChart>
+                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                <Area type="monotone" dataKey="income" fill="url(#colorIncome)" stroke="none" />
+                <Area type="monotone" dataKey="expense" fill="url(#colorExpense)" stroke="none" />
+                <Bar dataKey="income" name="Thu nhập" fill="#10b981" radius={[4, 4, 0, 0]} barSize={timeframe === '7days' ? 20 : 8} />
+                <Bar dataKey="expense" name="Chi phí" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={timeframe === '7days' ? 20 : 8} />
+                <Line type="monotone" dataKey="income" stroke="#059669" strokeWidth={2} dot={{ r: 2, fill: '#059669' }} activeDot={{ r: 4 }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>

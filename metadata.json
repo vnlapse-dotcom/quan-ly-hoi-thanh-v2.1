@@ -1,6 +1,6 @@
 {
-  "name": "App Quản lý Hội thánh V2.1",
-  "description": "Hệ thống quản lý toàn diện cho Hội thánh: Mục sư, nhân sự, hoạt động, lịch cầu nguyện, mục vụ, thu chi và giao việc.",
+  "name": "Quản Lý Hội Thánh",
+  "description": "Quản Lý Hội Thánh - Hệ thống quản lý toàn diện cho Hội thánh: Mục sư, nhân sự, hoạt động, lịch cầu nguyện, mục vụ, thu chi và giao việc.",
   "requestFramePermissions": [
     "camera",
     "microphone"

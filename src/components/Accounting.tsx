@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Transaction, UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
@@ -55,6 +55,7 @@ export default function Accounting({ user }: AccountingProps) {
     try {
       await addDoc(collection(db, path), {
         ...formData,
+        date: Timestamp.fromDate(new Date(formData.date)),
         recordedBy: user.uid
       });
       setIsModalOpen(false);

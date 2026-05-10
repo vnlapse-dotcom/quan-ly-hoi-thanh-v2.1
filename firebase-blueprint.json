@@ -119,9 +119,20 @@
         "taskId": { "type": "string", "description": "ID của công việc nếu tin nhắn là giao việc" }
       },
       "required": ["roomId", "senderId", "text", "createdAt", "type"]
+    },
+    "AppSettings": {
+      "title": "App Settings",
+      "description": "Cấu hình ứng dụng.",
+      "type": "object",
+      "properties": {
+        "churchName": { "type": "string" },
+        "churchSubtitle": { "type": "string" }
+      },
+      "required": ["churchName"]
     }
   },
   "firestore": {
+    "/settings/app": { "schema": "AppSettings", "description": "Cấu hình tên hội thánh và phụ đề" },
     "/users/{uid}": { "schema": "User", "description": "Thông tin cá nhân người dùng" },
     "/ministries/{id}": { "schema": "Ministry", "description": "Danh sách các ban ngành" },
     "/activities/{id}": { "schema": "Activity", "description": "Lịch hoạt động hội thánh" },

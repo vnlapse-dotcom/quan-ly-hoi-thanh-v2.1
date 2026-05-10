@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Task, UserProfile } from '../types';
 import { getAvatarUrl } from '../lib/utils';
@@ -60,8 +60,9 @@ export default function Tasks({ user }: TasksProps) {
     try {
       await addDoc(collection(db, path), {
         ...formData,
+        status: 'todo',
         assignedBy: user.uid,
-        createdAt: new Date().toISOString() // Using ISO string for simplicity, though serverTimestamp is better
+        createdAt: Timestamp.now()
       });
       setIsModalOpen(false);
       setFormData({

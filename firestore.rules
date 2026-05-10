@@ -25,7 +25,7 @@ service cloud.firestore {
     }
 
     function currentUserRole() {
-      return getUserData(request.auth.uid).role;
+      return getUserData(request.auth.uid).get('role', 'member');
     }
 
     function isAdmin() {
@@ -41,11 +41,11 @@ service cloud.firestore {
     }
 
     function isStaff() {
-      return isPastor() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && currentUserRole() == 'staff');
+      return isPastor() || isAccountant() || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && currentUserRole() == 'staff');
     }
 
     function isApproved() {
-      return isSignedIn() && (request.auth.token.email == 'vnlapse@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).isApproved == true));
+      return isSignedIn() && (request.auth.token.email == 'vnlapse@gmail.com' || (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData(request.auth.uid).get('isApproved', false) == true));
     }
 
     function incoming() {
@@ -60,14 +60,15 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'role', 'isApproved', 'isEmailVerified']) &&
-             data.keys().size() <= 15 &&
+             data.keys().size() <= 20 &&
              data.uid == request.auth.uid &&
              data.email == request.auth.token.email &&
              data.role in ['admin', 'pastor', 'accountant', 'staff', 'member'] &&
              data.isApproved is bool &&
              data.isEmailVerified is bool &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
-             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100));
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000));
     }
 
     function isValidMinistry(data) {
@@ -141,15 +142,15 @@ service cloud.firestore {
     }
 
     match /transactions/{id} {
-      allow get: if isAccountant() && isValidId(id);
-      allow list: if isAccountant();
+      allow get: if (isAdmin() || isAccountant()) && isValidId(id);
+      allow list: if isAdmin() || isAccountant();
       allow create, update: if isAccountant() && isValidId(id) && isValidTransaction(incoming());
       allow delete: if isAdmin() && isValidId(id);
     }
 
     match /tasks/{id} {
-      allow get: if isSignedIn() && isValidId(id) && (resource.data.assignedTo == request.auth.uid || resource.data.assignedBy == request.auth.uid || isPastor() || isAdmin());
-      allow list: if isSignedIn() && (resource.data.assignedTo == request.auth.uid || resource.data.assignedBy == request.auth.uid || isPastor() || isAdmin());
+      allow get: if isSignedIn() && isValidId(id) && (isAdmin() || isPastor() || resource.data.assignedTo == request.auth.uid || resource.data.assignedBy == request.auth.uid);
+      allow list: if isSignedIn() && (isAdmin() || isPastor() || resource.data.assignedTo == request.auth.uid || resource.data.assignedBy == request.auth.uid);
       allow create: if isStaff() && isValidId(id) && isValidTask(incoming()) && incoming().assignedBy == request.auth.uid;
       allow update: if isSignedIn() && isValidId(id) && (
         // Terminal state locking: Cannot update if status was already 'done' unless admin
@@ -174,6 +175,11 @@ service cloud.firestore {
       allow read: if isSignedIn() && isValidId(messageId) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(id)).data.participants;
       allow create: if isSignedIn() && isValidId(messageId) && request.auth.uid in get(/databases/$(database)/documents/chat_rooms/$(id)).data.participants &&
                     incoming().senderId == request.auth.uid;
+    }
+
+    match /settings/app {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
