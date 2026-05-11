@@ -126,7 +126,8 @@
       "type": "object",
       "properties": {
         "churchName": { "type": "string" },
-        "churchSubtitle": { "type": "string" }
+        "churchSubtitle": { "type": "string" },
+        "logoUrl": { "type": "string", "description": "URL hoặc Base64 của logo Hội thánh" }
       },
       "required": ["churchName"]
     }

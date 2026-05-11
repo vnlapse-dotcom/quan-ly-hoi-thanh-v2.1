@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Transaction, UserProfile } from '../types';
-import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { handleFirestoreError, OperationType, parseDate } from '../lib/firebaseUtils';
 import { 
   Plus, 
   TrendingUp, 
@@ -201,8 +201,8 @@ export default function Accounting({ user }: AccountingProps) {
                   onClick={() => setViewingTransaction(tx)}
                 >
                   <td className="px-10 py-8">
-                    <p className="font-display font-black text-church-navy text-lg leading-none mb-1">{format(new Date(tx.date), 'dd/MM')}</p>
-                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{format(new Date(tx.date), 'yyyy · HH:mm')}</p>
+                    <p className="font-display font-black text-church-navy text-lg leading-none mb-1">{format(parseDate(tx.date), 'dd/MM')}</p>
+                    <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">{format(parseDate(tx.date), 'yyyy · HH:mm')}</p>
                   </td>
                   <td className="px-10 py-8">
                     <p className="font-bold text-church-navy text-base truncate max-w-[300px] group-hover:text-church-gold transition-colors">{tx.description || 'Không có mô tả'}</p>
@@ -299,7 +299,7 @@ export default function Accounting({ user }: AccountingProps) {
                     </div>
                     <div className="flex items-center justify-between py-4 border-b border-neutral-100">
                        <span className="text-[10px] sm:text-sm font-bold text-neutral-400 uppercase">Ngày ghi nhận</span>
-                       <span className="font-bold text-neutral-900 text-sm sm:text-base">{format(new Date(viewingTransaction.date), 'HH:mm, dd/MM/yyyy', { locale: vi })}</span>
+                       <span className="font-bold text-neutral-900 text-sm sm:text-base">{format(parseDate(viewingTransaction.date), 'HH:mm, dd/MM/yyyy', { locale: vi })}</span>
                     </div>
                     <div className="flex items-center justify-between py-4">
                        <span className="text-[10px] sm:text-sm font-bold text-neutral-400 uppercase">ID Giao dịch</span>

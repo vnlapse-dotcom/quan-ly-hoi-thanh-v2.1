@@ -43,12 +43,36 @@ export default function Layout() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [appSettings, setAppSettings] = useState({ churchName: 'Hội Thánh', churchSubtitle: 'Chúa Giê-su' });
+  const [appSettings, setAppSettings] = useState({ churchName: 'Hội Thánh', churchSubtitle: 'Chúa Giê-su', logoUrl: '' });
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
       if (snap.exists()) {
-        setAppSettings(snap.data() as any);
+        const data = snap.data();
+        setAppSettings({
+          churchName: data.churchName || 'Hội Thánh',
+          churchSubtitle: data.churchSubtitle || 'Chúa Giê-su',
+          logoUrl: data.logoUrl || ''
+        });
+
+        // Dynamic Favicon
+        if (data.logoUrl) {
+          let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.getElementsByTagName('head')[0].appendChild(link);
+          }
+          link.href = data.logoUrl;
+          
+          let appleLink = document.querySelector("link[rel~='apple-touch-icon']") as HTMLLinkElement;
+          if (!appleLink) {
+            appleLink = document.createElement('link');
+            appleLink.rel = 'apple-touch-icon';
+            document.getElementsByTagName('head')[0].appendChild(appleLink);
+          }
+          appleLink.href = data.logoUrl;
+        }
       }
     }, (error) => handleFirestoreError(error, OperationType.GET, 'settings/app'));
     return () => unsub();
@@ -179,7 +203,7 @@ export default function Layout() {
     { id: 'prayer', label: 'Cầu nguyện', icon: Heart },
     { id: 'ministries', label: 'Ban ngành', icon: UsersRound },
     { id: 'chat', label: 'Tin nhắn', icon: MessageSquare },
-    { id: 'accounting', label: 'Kế toán', icon: Wallet, roles: ['admin', 'accountant'] },
+    { id: 'accounting', label: 'Tài chính', icon: Wallet, roles: ['admin', 'accountant'] },
     { id: 'tasks', label: 'Công việc', icon: CheckSquare },
     { id: 'settings', label: 'Thiết lập', icon: SettingsIcon, roles: ['admin'] },
   ];
@@ -224,8 +248,12 @@ export default function Layout() {
         <div className="p-8 flex items-center justify-between">
           {(isSidebarOpen || window.innerWidth < 1024) && (
             <div className="flex items-center gap-4 overflow-hidden whitespace-nowrap">
-              <div className="w-12 h-12 bg-church-navy rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-church-navy/20">
-                <Church className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 bg-church-navy rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg shadow-church-navy/20 overflow-hidden">
+                {appSettings.logoUrl ? (
+                  <img src={appSettings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Church className="w-7 h-7 text-white" />
+                )}
               </div>
               <div>
                 <span className="font-display font-black text-2xl text-church-navy tracking-tight block uppercase">{appSettings.churchName}</span>
@@ -234,8 +262,12 @@ export default function Layout() {
             </div>
           )}
           {!isSidebarOpen && window.innerWidth >= 1024 && (
-             <div className="w-12 h-12 bg-church-navy rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-church-navy/20">
-                <Church className="w-7 h-7 text-white" />
+             <div className="w-12 h-12 bg-church-navy rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-church-navy/20 overflow-hidden">
+                {appSettings.logoUrl ? (
+                  <img src={appSettings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <Church className="w-7 h-7 text-white" />
+                )}
              </div>
           )}
           {window.innerWidth < 1024 && (

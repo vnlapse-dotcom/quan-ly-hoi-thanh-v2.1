@@ -339,7 +339,7 @@ export default function Members({ user }: MembersProps) {
                     >
                       <option value="member">Tín hữu</option>
                       <option value="staff">Nhân sự</option>
-                      <option value="accountant">Kế toán</option>
+                      <option value="accountant">Tài chính</option>
                       <option value="pastor">Mục sư</option>
                       <option value="admin">Quản trị viên</option>
                     </select>

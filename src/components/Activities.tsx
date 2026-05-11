@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Activity, UserProfile } from '../types';
-import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { handleFirestoreError, OperationType, parseDate } from '../lib/firebaseUtils';
 import { 
   Plus, 
   Calendar as CalendarIcon, 
@@ -149,8 +149,8 @@ export default function Activities({ user }: ActivitiesProps) {
               className="bg-white p-6 sm:p-8 rounded-4xl border border-neutral-100 shadow-sm card-hover flex flex-row items-center gap-8 group glass"
             >
               <div className="w-20 h-20 bg-neutral-50 rounded-3xl flex flex-col items-center justify-center border border-neutral-100 flex-shrink-0 group-hover:bg-church-navy transition-all duration-500">
-                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest group-hover:text-church-gold/60">{format(new Date(activity.startTime), 'MMM', { locale: vi })}</span>
-                <span className="text-3xl font-display font-black text-church-navy leading-none group-hover:text-white">{format(new Date(activity.startTime), 'dd')}</span>
+                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest group-hover:text-church-gold/60">{format(parseDate(activity.startTime), 'MMM', { locale: vi })}</span>
+                <span className="text-3xl font-display font-black text-church-navy leading-none group-hover:text-white">{format(parseDate(activity.startTime), 'dd')}</span>
               </div>
 
               <div className="flex-1 min-w-0">
@@ -163,7 +163,7 @@ export default function Activities({ user }: ActivitiesProps) {
                 <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-neutral-500 text-sm font-medium">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-neutral-300" />
-                    <span className="text-neutral-900 font-bold">{format(new Date(activity.startTime), 'HH:mm', { locale: vi })}</span>
+                    <span className="text-neutral-900 font-bold">{format(parseDate(activity.startTime), 'HH:mm', { locale: vi })}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-neutral-300" />
@@ -235,7 +235,7 @@ export default function Activities({ user }: ActivitiesProps) {
                        </div>
                        <div>
                           <p className="text-[10px] font-bold text-neutral-400 uppercase">Thời gian</p>
-                          <p className="text-sm font-bold text-neutral-900">{format(new Date(viewingActivity.startTime), 'HH:mm, dd/MM/yyyy', { locale: vi })}</p>
+                          <p className="text-sm font-bold text-neutral-900">{format(parseDate(viewingActivity.startTime), 'HH:mm, dd/MM/yyyy', { locale: vi })}</p>
                        </div>
                     </div>
                     <div className="flex items-center gap-4 p-4 bg-neutral-50 rounded-2xl">

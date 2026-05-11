@@ -3,6 +3,7 @@ import { collection, onSnapshot, addDoc, deleteDoc, doc, query, orderBy } from '
 import { db } from '../firebase';
 import { PrayerTopic, UserProfile } from '../types';
 import { getAvatarUrl } from '../lib/utils';
+import { handleFirestoreError, OperationType, parseDate } from '../lib/firebaseUtils';
 import { 
   Plus, 
   Heart, 
@@ -116,7 +117,7 @@ export default function Prayer({ user }: PrayerProps) {
                       <Heart className="w-8 h-8 text-rose-500 fill-rose-500 group-hover:text-white group-hover:fill-white transition-all" />
                    </div>
                    <div>
-                      <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[.3em] mb-1">{format(new Date(t.date), 'EEEE, dd/MM/yyyy', { locale: vi })}</p>
+                      <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[.3em] mb-1">{format(parseDate(t.date), 'EEEE, dd/MM/yyyy', { locale: vi })}</p>
                       <h4 className="text-2xl font-display font-black text-church-navy group-hover:text-church-gold transition-colors">{t.topic}</h4>
                    </div>
                 </div>
@@ -207,7 +208,7 @@ export default function Prayer({ user }: PrayerProps) {
 
                  <div className="flex items-center gap-3 p-4 bg-red-50 rounded-2xl border border-red-100">
                     <Calendar className="w-5 h-5 text-red-500" />
-                    <span className="text-sm sm:text-base font-bold text-red-900">Ngày đăng: {format(new Date(viewingTopic.date), 'dd/MM/yyyy', { locale: vi })}</span>
+                    <span className="text-sm sm:text-base font-bold text-red-900">Ngày đăng: {format(parseDate(viewingTopic.date), 'dd/MM/yyyy', { locale: vi })}</span>
                  </div>
 
                  <button 

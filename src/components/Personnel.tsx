@@ -86,7 +86,7 @@ export default function Personnel({ user }: PersonnelProps) {
   const roleLabels: Record<UserRole, string> = {
     admin: 'Quản trị viên',
     pastor: 'Mục sư',
-    accountant: 'Kế toán',
+    accountant: 'Tài chính',
     staff: 'Nhân sự',
     member: 'Tín hữu'
   };

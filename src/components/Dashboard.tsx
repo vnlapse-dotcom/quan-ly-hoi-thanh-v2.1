@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, limit, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { UserProfile, Activity, Transaction, Task } from '../types';
-import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { handleFirestoreError, OperationType, parseDate } from '../lib/firebaseUtils';
 import { 
   Users, 
   Calendar, 
@@ -59,14 +59,6 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
   const [timeframe, setTimeframe] = useState<'7days' | 'month' | 'lastMonth'>('7days');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [chartData, setChartData] = useState<any[]>([]);
-
-  const parseDate = (d: any) => {
-    if (!d) return new Date();
-    if (d instanceof Date) return d;
-    if (typeof d.toDate === 'function') return d.toDate();
-    if (d.seconds) return new Date(d.seconds * 1000);
-    return new Date(d);
-  };
 
   useEffect(() => {
     // Basic stats
@@ -339,14 +331,14 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                 onClick={() => onNavigate('activities')}
               >
                 <div className="w-12 h-12 bg-neutral-50 rounded-2xl flex flex-col items-center justify-center border border-neutral-100 flex-shrink-0 group-hover:bg-neutral-900 group-hover:border-neutral-900 transition-colors">
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase group-hover:text-neutral-500">{format(new Date(activity.startTime), 'MMM', { locale: vi })}</span>
-                  <span className="text-lg font-bold text-neutral-900 leading-none group-hover:text-white">{format(new Date(activity.startTime), 'dd')}</span>
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase group-hover:text-neutral-500">{format(parseDate(activity.startTime), 'MMM', { locale: vi })}</span>
+                  <span className="text-lg font-bold text-neutral-900 leading-none group-hover:text-white">{format(parseDate(activity.startTime), 'dd')}</span>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <h4 className="font-bold text-neutral-900 truncate group-hover:text-neutral-600 transition-colors">{activity.title}</h4>
                   <p className="text-sm text-neutral-500 flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {format(new Date(activity.startTime), 'HH:mm')} - {activity.location || 'Hội thánh'}
+                    {format(parseDate(activity.startTime), 'HH:mm')} - {activity.location || 'Hội thánh'}
                   </p>
                 </div>
               </div>
@@ -391,8 +383,8 @@ export default function Dashboard({ user, onNavigate }: DashboardProps) {
                   onClick={() => onNavigate('accounting')}
                 >
                   <td className="py-5">
-                    <p className="text-sm font-bold text-neutral-900">{format(new Date(tx.date), 'dd/MM')}</p>
-                    <p className="text-[10px] text-neutral-400 font-medium">{format(new Date(tx.date), 'yyyy')}</p>
+                    <p className="text-sm font-bold text-neutral-900">{format(parseDate(tx.date), 'dd/MM')}</p>
+                    <p className="text-[10px] text-neutral-400 font-medium">{format(parseDate(tx.date), 'yyyy')}</p>
                   </td>
                   <td className="py-5 font-bold text-neutral-900 group-hover:text-church-navy transition-colors">{tx.description || 'Không có mô tả'}</td>
                   <td className="py-5">

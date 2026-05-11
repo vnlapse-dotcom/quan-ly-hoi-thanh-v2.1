@@ -3,7 +3,7 @@ import { collection, onSnapshot, addDoc, query, orderBy, deleteDoc, doc, updateD
 import { db } from '../firebase';
 import { Task, UserProfile } from '../types';
 import { getAvatarUrl } from '../lib/utils';
-import { handleFirestoreError, OperationType } from '../lib/firebaseUtils';
+import { handleFirestoreError, OperationType, parseDate } from '../lib/firebaseUtils';
 import { 
   Plus, 
   CheckCircle2, 
@@ -227,7 +227,7 @@ export default function Tasks({ user }: TasksProps) {
                        {task.dueDate && (
                          <div className="flex items-center gap-1.5 text-[9px] font-black text-neutral-300 uppercase tracking-widest group-hover:text-church-navy transition-colors">
                             <Calendar className="w-3.5 h-3.5" />
-                            {format(new Date(task.dueDate), 'dd/MM')}
+                            {format(parseDate(task.dueDate), 'dd/MM')}
                          </div>
                        )}
                     </div>
@@ -299,7 +299,7 @@ export default function Tasks({ user }: TasksProps) {
                        <div>
                           <p className="text-[10px] font-bold text-neutral-400 uppercase">Hạn chót</p>
                           <p className="text-sm font-bold text-neutral-900">
-                             {viewingTask.dueDate ? format(new Date(viewingTask.dueDate), 'HH:mm, dd/MM/yyyy', { locale: vi }) : 'Không có'}
+                             {viewingTask.dueDate ? format(parseDate(viewingTask.dueDate), 'HH:mm, dd/MM/yyyy', { locale: vi }) : 'Không có'}
                           </p>
                        </div>
                     </div>
